@@ -10,8 +10,16 @@ public class HashTable {
     private Entry[] elements;
 
     public HashTable(int initialCapacity, double initialLoadFactor) {
-        capacity = initialCapacity;
-        loadFactor = initialLoadFactor;
+        if (initialCapacity <= 0 || initialCapacity > Integer.MAX_VALUE - 8) {
+            capacity = INITIAL_CAPACITY;
+        } else {
+            capacity = initialCapacity;
+        }
+        if (initialLoadFactor < 0 || initialLoadFactor > 1) {
+            loadFactor = INITIAL_LOAD_FACTOR;
+        } else {
+            loadFactor = initialLoadFactor;
+        }
         elements = new Entry[capacity];
     }
 
