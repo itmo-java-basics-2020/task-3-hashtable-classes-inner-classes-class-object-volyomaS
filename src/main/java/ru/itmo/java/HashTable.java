@@ -25,28 +25,19 @@ public class HashTable {
 
     Object put(Object key, Object value) {
         int hash = (key.hashCode() & Integer.MAX_VALUE) % capacity;
+        Integer firstDeleted = null;
         while (elements[hash] != null) {
             if (elements[hash].getKey().equals(key) && !elements[hash].isDeleted()) {
-                break;
+                Object prevValue = elements[hash].getValue();
+                elements[hash].setValue(value);
+                return prevValue;
+            } else if (elements[hash].isDeleted() && firstDeleted == null) {
+                firstDeleted = hash;
             }
             hash = (hash + 1) % capacity;
         }
-        if (elements[hash] != null) {
-            Object prevValue = elements[hash].getValue();
-            elements[hash].setValue(value);
-            return prevValue;
-        }
-        hash = (key.hashCode() & Integer.MAX_VALUE) % capacity;
-        while (elements[hash] != null) {
-            if (elements[hash].isDeleted()) {
-                elements[hash] = new Entry(key, value);
-                increaseSize();
-                if (checkCapacity()) {
-                    elements = ensureCapacity();
-                }
-                return null;
-            }
-            hash = (hash + 1) % capacity;
+        if (firstDeleted != null) {
+            hash = firstDeleted;
         }
         elements[hash] = new Entry(key, value);
         increaseSize();
