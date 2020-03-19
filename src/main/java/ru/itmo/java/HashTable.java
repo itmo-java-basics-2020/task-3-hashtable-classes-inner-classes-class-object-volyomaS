@@ -9,6 +9,14 @@ public class HashTable {
     private int size;
     private Entry[] elements;
 
+    public HashTable() {
+        this(INITIAL_CAPACITY, INITIAL_LOAD_FACTOR);
+    }
+
+    public HashTable(int initialCapacity) {
+        this(initialCapacity, INITIAL_LOAD_FACTOR);
+    }
+
     public HashTable(int initialCapacity, double initialLoadFactor) {
         if (initialCapacity <= 0 || initialCapacity > Integer.MAX_VALUE - 8) {
             capacity = INITIAL_CAPACITY;
@@ -23,101 +31,77 @@ public class HashTable {
         elements = new Entry[capacity];
     }
 
-    public HashTable(int initialCapacity) {
-        this(initialCapacity, INITIAL_LOAD_FACTOR);
-    }
-
-    public HashTable() {
-        this(INITIAL_CAPACITY, INITIAL_LOAD_FACTOR);
-    }
-
-    Object put(Object key, Object value) {
-        int hash = (key.hashCode() & Integer.MAX_VALUE) % capacity;
-        Integer firstDeleted = null;
-        while (elements[hash] != null) {
-            if (elements[hash].getKey().equals(key) && !elements[hash].isDeleted()) {
-                Object prevValue = elements[hash].getValue();
-                elements[hash].setValue(value);
-                return prevValue;
-            } else if (elements[hash].isDeleted() && firstDeleted == null) {
-                firstDeleted = hash;
-            }
-            hash = (hash + 1) % capacity;
+    public Object put(Object key, Object value) {
+        int index = find(key);
+        if (elements[index] != null) {
+            Object prevValue = elements[index].getValue();
+            elements[index].setValue(value);
+            return prevValue;
         }
-        if (firstDeleted != null) {
-            hash = firstDeleted;
+        index = (key.hashCode() & Integer.MAX_VALUE) % capacity;
+        while (elements[index] != null && !elements[index].isDeleted()) {
+            index = (index + 1) % capacity;
         }
-        elements[hash] = new Entry(key, value);
-        increaseSize();
-        if (checkCapacity()) {
-            elements = ensureCapacity();
+        elements[index] = new Entry(key, value);
+        size++;
+        if (isFull()) {
+            ensureCapacity();
         }
         return null;
     }
 
-    private boolean checkCapacity() {
-        return getThreshold() <= size;
-    }
-
-    private Entry[] ensureCapacity() {
-        int newCapacity = capacity * 2;
-        Entry[] newElements = new Entry[newCapacity];
-        for (int i = 0; i < capacity; i++) {
-            if (elements[i] != null && !elements[i].isDeleted()) {
-                int hash = (elements[i].getKey().hashCode() & Integer.MAX_VALUE) % newCapacity;
-                while (newElements[hash % newCapacity] != null) {
-                    hash++;
-                }
-                newElements[hash % newCapacity] = elements[i];
-            }
-        }
-        capacity *= 2;
-        return newElements;
-    }
-
-    Object get(Object key) {
-        int hash = (key.hashCode() & Integer.MAX_VALUE) % capacity;
-        while (elements[hash] != null) {
-            if (elements[hash].getKey().equals(key) && !elements[hash].isDeleted()) {
-                return elements[hash].getValue();
-            }
-            hash = (hash + 1) % capacity;
+    public Object get(Object key) {
+        int index = find(key);
+        if (elements[index] != null) {
+            return elements[index].getValue();
         }
         return null;
     }
 
-    Object remove(Object key) {
-        int hash = (key.hashCode() & Integer.MAX_VALUE) % capacity;
-        while (elements[hash] != null) {
-            if (elements[hash].getKey().equals(key) && !elements[hash].isDeleted()) {
-                Object prevValue = elements[hash].getValue();
-                elements[hash].delete();
-                decreaseSize();
-                return prevValue;
-            }
-            hash = (hash + 1) % capacity;
+    public Object remove(Object key) {
+        int index = find(key);
+        if (elements[index] != null) {
+            Object prevValue = elements[index].getValue();
+            elements[index].delete();
+            size--;
+            return prevValue;
         }
         return null;
     }
 
-    int size() {
+    public int size() {
         return size;
     }
 
-    private void increaseSize() {
-        size++;
+    private int find(Object key) {
+        int index = (key.hashCode() & Integer.MAX_VALUE) % capacity;
+        while (elements[index] != null) {
+            if (elements[index].getKey().equals(key) && !elements[index].isDeleted()) {
+                return index;
+            }
+            index = (index + 1) % capacity;
+        }
+        return index;
     }
 
-    private void decreaseSize() {
-        size--;
+    private boolean isFull() {
+        return loadFactor * capacity <= size;
     }
 
-    private double getThreshold() {
-        return loadFactor * capacity;
+    private void ensureCapacity() {
+        Entry[] oldElements = elements;
+        capacity *= 2;
+        elements = new Entry[capacity];
+        for (Entry oldElement : oldElements) {
+            if (oldElement != null && !oldElement.isDeleted()) {
+                put(oldElement.getKey(), oldElement.getValue());
+                size--;
+            }
+        }
     }
 
     private static class Entry {
-        private Object key;
+        private final Object key;
         private Object value;
         private boolean isDeleted;
 
@@ -147,5 +131,4 @@ public class HashTable {
             isDeleted = true;
         }
     }
-
 }
